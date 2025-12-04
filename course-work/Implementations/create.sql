@@ -1,0 +1,103 @@
+
+CREATE TABLE USERS (
+    UserId INT PRIMARY KEY IDENTITY(1,1),
+    Username NVARCHAR(255) UNIQUE NOT NULL,
+    Email NVARCHAR(255) UNIQUE NOT NULL,
+    PasswordHash NVARCHAR(255) NOT NULL,
+    Role NVARCHAR(10) NOT NULL,
+    CreatedAt DATETIMEOFFSET NOT NULL DEFAULT GETUTCDATE(),
+    IsActive BIT NOT NULL DEFAULT 1,
+    CONSTRAINT CK_Users_Role CHECK (Role IN ('User','Admin'))
+);
+GO
+
+
+
+CREATE TABLE ADDRESSES (
+    AddressId INT PRIMARY KEY IDENTITY(1,1),
+    UserId INT NOT NULL,
+    Country NVARCHAR(100) NOT NULL,
+    City NVARCHAR(100) NOT NULL,
+    Street NVARCHAR(255) NOT NULL,
+    PostalCode NVARCHAR(20),
+    CONSTRAINT FK_Addresses_Users FOREIGN KEY (UserId) REFERENCES USERS(UserId)
+);
+GO
+
+
+
+CREATE TABLE CATEGORIES (
+    CategoryId INT PRIMARY KEY IDENTITY(1,1),
+    Name NVARCHAR(100) UNIQUE NOT NULL,
+    Description NVARCHAR(MAX),
+    ImageUrl NVARCHAR(512)
+);
+GO
+
+
+
+CREATE TABLE PRODUCTS (
+    ProductId INT PRIMARY KEY IDENTITY(1,1),
+    Name NVARCHAR(255) NOT NULL,
+    Description NVARCHAR(MAX),
+    Price DECIMAL(10, 2) NOT NULL,
+    StockQuantity INT NOT NULL,
+    ImageUrl NVARCHAR(512),
+    CreatedAt DATETIMEOFFSET NOT NULL DEFAULT GETUTCDATE()
+);
+GO
+
+
+
+CREATE TABLE PRODUCT_CATEGORIES (
+    ProductId INT NOT NULL,
+    CategoryId INT NOT NULL,
+    PRIMARY KEY (ProductId, CategoryId),
+    CONSTRAINT FK_ProductCategories_Products FOREIGN KEY (ProductId) REFERENCES PRODUCTS(ProductId),
+    CONSTRAINT FK_ProductCategories_Categories FOREIGN KEY (CategoryId) REFERENCES CATEGORIES(CategoryId)
+);
+GO
+
+
+
+CREATE TABLE ORDERS (
+    OrderId INT PRIMARY KEY IDENTITY(1,1),
+    UserId INT NOT NULL,
+    AddressId INT NOT NULL,
+    OrderDate DATETIMEOFFSET NOT NULL DEFAULT GETUTCDATE(),
+    Status NVARCHAR(10) NOT NULL,
+    TotalAmount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    CONSTRAINT FK_Orders_Users FOREIGN KEY (UserId) REFERENCES USERS(UserId),
+    CONSTRAINT FK_Orders_Addresses FOREIGN KEY (AddressId) REFERENCES ADDRESSES(AddressId),
+    CONSTRAINT CK_Orders_Status CHECK (Status IN ('Pending','Paid','Shipped'))
+);
+GO
+
+
+
+CREATE TABLE ORDER_ITEMS (
+    OrderItemId INT PRIMARY KEY IDENTITY(1,1),
+    OrderId INT NOT NULL,
+    ProductId INT NOT NULL,
+    Quantity INT NOT NULL,
+    UnitPrice DECIMAL(10, 2) NOT NULL,
+    CONSTRAINT FK_OrderItems_Orders FOREIGN KEY (OrderId) REFERENCES ORDERS(OrderId),
+    CONSTRAINT FK_OrderItems_Products FOREIGN KEY (ProductId) REFERENCES PRODUCTS(ProductId),
+    CONSTRAINT CK_OrderItems_Quantity CHECK (Quantity > 0),
+    CONSTRAINT UQ_OrderItems_OrderProduct UNIQUE (OrderId, ProductId)
+);
+GO
+
+
+
+CREATE TABLE PAYMENTS (
+    PaymentId INT PRIMARY KEY IDENTITY(1,1),
+    OrderId INT NOT NULL,
+    Provider NVARCHAR(20) NOT NULL,
+    TransactionId NVARCHAR(100),
+    Status NVARCHAR(20) NOT NULL,
+    PaymentDate DATETIMEOFFSET NOT NULL DEFAULT GETUTCDATE(),
+    CONSTRAINT FK_Payments_Orders FOREIGN KEY (OrderId) REFERENCES ORDERS(OrderId),
+    CONSTRAINT CK_Payments_Provider CHECK (Provider IN ('Stripe','PayPal','COD'))
+);
+GO
